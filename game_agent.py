@@ -7,7 +7,7 @@ You must test your agent's strength against a set of agents with known
 relative strength using tournament.py and include the results in your report.
 """
 import random
-
+from sample_players import improved_score
 
 class Timeout(Exception):
     """Subclass base exception for code clarity."""
@@ -71,7 +71,7 @@ class CustomPlayer:
         timer expires.
     """
 
-    def __init__(self, search_depth=3, score_fn=custom_score,
+    def __init__(self, search_depth=3, score_fn=improved_score,
                  iterative=True, method='minimax', timeout=10.):
         self.search_depth = search_depth
         self.iterative = iterative
@@ -126,32 +126,34 @@ class CustomPlayer:
 
 		
 		# Assigns  (-1, -1) as default representing no available legal moves
-		best_move = (-1, -1)
+        best_move = (-1, -1)
 		
 		# Checks if there are still legal moves. If there are no legal moves return (-1, -1)
-		if not legal_moves:
-		    return best_move
+        if not legal_moves:
+            return best_move
 		
 		# First move :  Return center position. Assumes that the board is a square and that there is a center (odd square)
-		if game.move_count in (0, 1):
-		    return (game.height//2, game.width//2)
+        if game.move_count in (0, 1):
+            return (game.height//2, game.width//2)
 		
 		# Get the method to be used. Minimax or Alpha-beta
-		method = self.minimax if self.method=='minimax' else self.alphabeta
+        method = self.minimax if self.method=='minimax' else self.alphabeta
         
         try:
             # The search method call (alpha beta or minimax) should happen in
             # here in order to avoid timeout. The try/except block will
             # automatically catch the exception raised by the search method
             # when the timer gets close to expiring
-			if self.iterative:
-			    
+            if self.iterative:
+                iterative_depth = 1
+                while True:
+                    best_score, best_move = method(game, iterative_depth)
+                    iterative_depth  += 1
 			
 			
             else:
 			# Select best move based on evaluation
-			    for move in legal_moves:
-				    branch_score, branch_move  = method()
+                best_score, best_move  = method(game, self.search_depth)
 			
 
         except Timeout:
@@ -196,7 +198,71 @@ class CustomPlayer:
             raise Timeout()
 
         # TODO: finish this function!
-        return 
+		# Assigns  (-1, -1) as default representing no available legal moves and +/- inf for upper and lower boundary of lowest and highest score
+        legal_moves = game.get_legal_moves()
+        best_move = (-1, -1)
+        low_score, high_score = float("inf"), float("-inf")
+		    	
+        if maximizing_player:
+		#No more legal moves
+            if not legal_moves:
+                return high_score, best_move
+					
+			# Reached target depth
+            if depth == 1:
+			
+                for move in legal_moves:
+			        # Evaluate the move's score
+                    score = self.score(game.forecast_move(move), self)
+				    # Check if winning move
+                    if score == float("inf"):
+            	        return score, move
+                    if score > high_score:
+                        high_score = score
+                        best_move = move
+                return high_score, best_move
+			
+			# Need to go deeper
+            for move in legal_moves:
+                score, _ = self.minimax(game.forecast_move(move), depth - 1, maximizing_player = False)
+				# Check if winning move
+                if score == float("inf"):
+                    return score, move
+                if score > high_score:
+                    high_score = score
+                    best_move = move
+            return high_score, best_move
+				
+        else:
+		    #No more legal moves
+            if not legal_moves:
+                return low_score, best_move
+		# Reached target depth
+            if depth == 1:
+			
+                for move in legal_moves:
+			        # Evaluate the move's score
+                    score = self.score(game.forecast_move(move), self)
+				    # Check if losing move
+                    if score == float("-inf"):
+                        return score, move
+                    if score < low_score:
+                        low_score = score
+                        best_move = move
+                return low_score, best_move
+			
+			# Need to go deeper
+            for move in legal_moves:
+                score, _ = self.minimax(game.forecast_move(move), depth - 1, maximizing_player = True)
+				# Check if losing move
+                if score == float("-inf"):
+                    return score, move
+                if score < low_score:
+                        low_score = score
+                        best_move = move
+            return low_score, best_move
+		
+
 
     def alphabeta(self, game, depth, alpha=float("-inf"), beta=float("inf"), maximizing_player=True):
         """Implement minimax search with alpha-beta pruning as described in the
@@ -240,4 +306,77 @@ class CustomPlayer:
             raise Timeout()
 
         # TODO: finish this function!
-        raise NotImplementedError
+        # Assigns  (-1, -1) as default representing no available legal moves and +/- inf for upper and lower boundary of lowest and highest score
+        legal_moves = game.get_legal_moves()
+        best_move = (-1, -1)
+        low_score, high_score = float("inf"), float("-inf")
+		    	
+        if maximizing_player:
+		#No more legal moves
+            if not legal_moves:
+                return high_score, best_move
+					
+			# Reached target depth
+            if depth == 1:
+			
+                for move in legal_moves:
+			        # Evaluate the move's score
+                    score = self.score(game.forecast_move(move), self)
+				    # Check if winning move
+                    if score == float("inf"):
+                        return score, move
+                    if score >= beta:
+                        return score, move
+                    if score > high_score:
+                        high_score = score
+                        best_move = move
+                return high_score, best_move
+			
+			# Need to go deeper
+            for move in legal_moves:
+                score, _ = self.alphabeta(game.forecast_move(move), depth - 1, alpha, beta, maximizing_player = False)
+				# Check if winning move
+                if score == float("inf"):
+                    return score, move
+                if score >= beta:
+                    return score, move
+                if score > high_score:
+                    high_score = score
+                    best_move = move
+                alpha = max(alpha, high_score)
+            return high_score, best_move
+				
+        else:
+		    #No more legal moves
+            if not legal_moves:
+                return low_score, best_move
+		# Reached target depth
+            if depth == 1:
+			
+                for move in legal_moves:
+			        # Evaluate the move's score
+                    score = self.score(game.forecast_move(move), self)
+				    # Check if losing move
+                    if score == float("-inf"):
+                        return score, move
+                    if score <= alpha:
+                        return score, move
+                    if score < low_score:
+                        low_score = score
+                        best_move = move
+                return low_score, best_move
+			
+			# Need to go deeper
+            for move in legal_moves:
+                score, _ = self.alphabeta(game.forecast_move(move), depth - 1, alpha, beta, maximizing_player=True)
+				# Check if losing move
+                if score == float("-inf"):
+                    return score, move
+                if score <= alpha:
+                    return score, move
+                if score < low_score:
+                    low_score = score
+                    best_move = move
+                beta = min(beta, low_score)
+            return low_score, best_move
+		
