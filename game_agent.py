@@ -7,11 +7,112 @@ You must test your agent's strength against a set of agents with known
 relative strength using tournament.py and include the results in your report.
 """
 import random
-from sample_players import improved_score
 
 class Timeout(Exception):
     """Subclass base exception for code clarity."""
     pass
+
+#First heuristic
+def pro_self_score(game, player):
+    """Evaluation function that gives more weight to conditions where the  player has more moves rather than when the opponent has less moves.
+
+    Parameters
+    ----------
+    game : `isolation.Board`
+        An instance of `isolation.Board` encoding the current state of the
+        game (e.g., player locations and blocked cells).
+
+    player : hashable
+        One of the objects registered by the game object as a valid player.
+        (i.e., `player` should be either game.__player_1__ or
+        game.__player_2__).
+
+    Returns
+    ----------
+    float
+        The heuristic value of the current game state
+    """
+    if game.is_loser(player):
+        return float("-inf")
+
+    if game.is_winner(player):
+        return float("inf")
+		
+	# TODO: Replace with evaluation function that outputs a score with preference to blocking moves
+
+    own_moves = len(game.get_legal_moves(player))
+    opp_moves = len(game.get_legal_moves(game.get_opponent(player)))
+    #print(game.get_player_location(player))
+    #print(game.get_legal_moves(game.get_opponent(player)))
+    #Of course this won't work since this means that the player move cannot be a legal opponent move.
+    return own_moves - (opp_moves * .9)
+
+#Second heuristic
+def anti_opponent_score(game, player):
+    """Evaluation function that gives more weight to conditions where the opponent player has less moves rather than when the player has more moves.
+
+    Parameters
+    ----------
+    game : `isolation.Board`
+        An instance of `isolation.Board` encoding the current state of the
+        game (e.g., player locations and blocked cells).
+
+    player : hashable
+        One of the objects registered by the game object as a valid player.
+        (i.e., `player` should be either game.__player_1__ or
+        game.__player_2__).
+
+    Returns
+    ----------
+    float
+        The heuristic value of the current game state
+    """
+    if game.is_loser(player):
+        return float("-inf")
+
+    if game.is_winner(player):
+        return float("inf")
+		
+	# TODO: Replace with evaluation function that outputs a score based on the move's distance to the center
+
+    own_moves = len(game.get_legal_moves(player))
+    opp_moves = len(game.get_legal_moves(game.get_opponent(player)))
+    return (own_moves*.9) - opp_moves
+	
+#Third heuristic
+def free_score(game, player):
+    """Combination of the pro_self_score and anti_opponent_score functions  being decided by the amount of free spaces on the board compared with the total number of moves for both players.
+	
+    Parameters
+    ----------
+    game : `isolation.Board`
+        An instance of `isolation.Board` encoding the current state of the
+        game (e.g., player locations and blocked cells).
+
+    player : hashable
+        One of the objects registered by the game object as a valid player.
+        (i.e., `player` should be either game.__player_1__ or
+        game.__player_2__).
+
+    Returns
+    ----------
+    float
+        The heuristic value of the current game state
+    """
+    if game.is_loser(player):
+        return float("-inf")
+
+    if game.is_winner(player):
+        return float("inf")
+		
+
+    free_space = len(game.get_blank_spaces());
+    own_moves = len(game.get_legal_moves(player))
+    opp_moves = len(game.get_legal_moves(game.get_opponent(player)))
+    total_moves = own_moves + opp_moves;
+    if free_space < total_moves:
+        return (own_moves*.9) - opp_moves
+    return own_moves - (opp_moves * .9)
 
 
 def custom_score(game, player):
@@ -38,7 +139,7 @@ def custom_score(game, player):
     """
 
     # TODO: finish this function!
-    raise NotImplementedError
+    return free_score(game, player)
 
 
 class CustomPlayer:
@@ -71,7 +172,7 @@ class CustomPlayer:
         timer expires.
     """
 
-    def __init__(self, search_depth=3, score_fn=improved_score,
+    def __init__(self, search_depth=3, score_fn=custom_score,
                  iterative=True, method='minimax', timeout=10.):
         self.search_depth = search_depth
         self.iterative = iterative
